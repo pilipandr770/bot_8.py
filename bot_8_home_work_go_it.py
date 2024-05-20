@@ -1,3 +1,4 @@
+import os
 import datetime
 import re
 import pickle
@@ -17,7 +18,7 @@ class Field:
 
 class Name(Field):
     def __eq__(self, another_value: str) -> bool:
-        return self.value == another_value
+        return self.value.lower() == another_value.lower()
 
 class Phone(Field):
     def __init__(self, num):
@@ -84,14 +85,14 @@ class Record:
 
 class AddressBook(UserDict):
     def __init__(self):
-        AddressBook.data = {}
+        self.data = {}
 
     def add_record(self, rec:Record):
-        AddressBook.data.update({rec.name.value:rec})
+        self.data.update({rec.name.value:rec})
 
     def find(self,name):
-        if name in AddressBook.data.keys():
-            for n,p in AddressBook.data.items():
+        if name in self.data.keys():
+            for n,p in self.data.items():
                 if n == name:
                     return p
         else:
@@ -100,9 +101,9 @@ class AddressBook(UserDict):
     def get_upcoming_birthdays(self):
         today = datetime.datetime.today().date()
         result = []
-        for user in AddressBook.data:
+        for user in self.data:
             try:
-                birthday = datetime.datetime.strptime(str(AddressBook.data[user].birthday), "%Y-%m-%d").date()
+                birthday = datetime.datetime.strptime(str(self.data[user].birthday), "%Y-%m-%d").date()
                 birthday_this_year = datetime.datetime(year = today.year, month = birthday.month, day = birthday.day).date()
                 week_day = birthday_this_year.isoweekday()
                 quant_days = (birthday_this_year - today).days
@@ -119,19 +120,26 @@ class AddressBook(UserDict):
         return result
 
     def delete(self,name):
-        if name in AddressBook.data.keys():
-            del AddressBook.data[name]
+        if name in self.data.keys():
+            del self.data[name]
 
     def save_to_file(self, filename="addressbook.pkl"):
-        with open(filename, "wb") as f:
-            pickle.dump(self, f)
+        try:
+            with open(filename, "wb") as f:
+                pickle.dump(self, f)
+        except Exception as e:
+            print(f"An error occurred while saving to file: {e}")
 
     def load_from_file(self, filename="addressbook.pkl"):
-        try:
-            with open(filename, "rb") as f:
-                return pickle.load(f)
-        except FileNotFoundError:
-            return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
+        if os.path.exists(filename):
+            try:
+                with open(filename, "rb") as f:
+                    return pickle.load(f)
+            except FileNotFoundError:
+                return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
+        else:
+            print("Файл не знайдено. Створюємо нову адресну книгу.")
+            return AddressBook()
 
 def input_error(func):
     def inner(*args, **kwargs):
